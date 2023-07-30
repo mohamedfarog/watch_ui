@@ -1,0 +1,32 @@
+menu "Zephyr Kernel"
+    source "Kconfig.zephyr"
+endmenu
+
+menu "ZSWatch"
+    config DISABLE_PAIRING_REQUIRED
+        bool
+    prompt "Disable encryption required for BLE connection (pairing/bonding)"
+    default n
+    help
+        "Disable encryption for BLE connection (pairing/bonding). Used only for debugging purposes."
+    
+    config DISPLAY_FAST_WAKEUP
+        bool
+    prompt "Don't turn off the display power, just put it into sleep mode when going idle."
+    default n
+    help
+        "When screen goes idle, don't turn off the display power, just put it into sleep mode. This will consume more power, but will make the screen wake up faster."
+
+    config DEMO_BUILD
+        bool
+    prompt "Add apps and features only aimed for demo purposes."
+    default y
+    help
+        "Enabling this option will add apps and features only aimed for demo purposes. This will increase the size of the firmware (flash usage)."
+endmenu
+
+rsource "drivers/Kconfig"
+
+module = APP
+module-str = APP
+source "subsys/logging/Kconfig.template.log_config"

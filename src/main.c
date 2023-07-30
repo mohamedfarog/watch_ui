@@ -1,23 +1,20 @@
-/*
- * Copyright (c) 2018 Jan Van Winkel <jan.van_winkel@dxplore.eu>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
+#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/gpio.h>
-#include <lvgl.h>
-#include <stdio.h>
+#include <zephyr/sys/printk.h>
+#include <hal/nrf_gpio.h>
+#include "watchface_ui.h"
 #include <string.h>
-#include <zephyr/kernel.h>
+
+
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app);
 
-static uint32_t count;
 
 #ifdef CONFIG_GPIO
 static struct gpio_dt_spec button_gpio = GPIO_DT_SPEC_GET_OR(
@@ -32,17 +29,97 @@ static void button_isr_callback(const struct device *port,
 	ARG_UNUSED(cb);
 	ARG_UNUSED(pins);
 
-	count = 0;
+
+	
 }
 #endif
 
-void main(void)
+
+/* 1000 msec = 1 sec */
+#define SLEEP_TIME_MS   1000
+bool blstatus = false;
+
+
+// #define LED0_NODE DT_NODELABEL(led0)
+#define LED1_NODE DT_NODELABEL(led1)
+
+#define BUTTON0_NODE DT_NODELABEL(button0)
+#define BUTTON1_NODE DT_NODELABEL(button1)
+#define BUTTON2_NODE DT_NODELABEL(button2)
+#define BUTTON3_NODE DT_NODELABEL(button3)
+
+
+
+//   static const struct gpio_dt_spec led0_spec = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+  static const struct gpio_dt_spec button0_spec = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
+  static const struct gpio_dt_spec button1_spec = GPIO_DT_SPEC_GET(BUTTON1_NODE, gpios);
+  static const struct gpio_dt_spec button2_spec = GPIO_DT_SPEC_GET(BUTTON2_NODE, gpios);
+  static const struct gpio_dt_spec button3_spec = GPIO_DT_SPEC_GET(BUTTON3_NODE, gpios);
+
+  static const struct gpio_dt_spec led1_spec = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
+
+
+  static struct gpio_callback button0_cb;
+  static struct gpio_callback button1_cb;
+  static struct gpio_callback button2_cb;
+  static struct gpio_callback button3_cb;
+
+
+
+void button0_pressed_callback(const struct device *gpiob, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
+
+	if (!gpio_pin_set_dt(&led1_spec, 0))
+	{
+		gpio_pin_set_dt(&led1_spec, 0);
+		blstatus = true;
+		bluetooth_status(blstatus);
+	
+
+	}
+
+}
+
+void button1_pressed_callback(const struct device *gpiob, struct gpio_callback *cb, gpio_port_pins_t pins)
+{
+	if (!gpio_pin_set_dt(&led1_spec, 0))
+	{
+		gpio_pin_set_dt(&led1_spec, 0);
+		//here  call the screen for this button
+	}
+
+	
+}
+void button2_pressed_callback(const struct device *gpiob, struct gpio_callback *cb, gpio_port_pins_t pins)
+{
+	if (!gpio_pin_set_dt(&led1_spec, 0))
+	{
+		gpio_pin_set_dt(&led1_spec, 0);
+		//here  call the screen for this button
+	}
+
+}
+
+void button3_pressed_callback(const struct device *gpiob, struct gpio_callback *cb, gpio_port_pins_t pins)
+{
+	if (!gpio_pin_set_dt(&led1_spec, 0))
+	{
+		gpio_pin_set_dt(&led1_spec, 0);
+		//here  call the screen for this button
+	}
+
+}
+
+
+
+int main(void)
+{
+
+	
 	int err;
-	char count_str[11] = {0};
 	const struct device *display_dev;
-	lv_obj_t *hello_world_label;
-	lv_obj_t *count_label;
+
+	
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
@@ -76,32 +153,46 @@ void main(void)
 	}
 #endif
 
-	if (IS_ENABLED(CONFIG_LV_Z_POINTER_KSCAN)) {
-		lv_obj_t *hello_world_button;
 
-		hello_world_button = lv_btn_create(lv_scr_act());
-		lv_obj_align(hello_world_button, LV_ALIGN_CENTER, 0, 0);
-		hello_world_label = lv_label_create(hello_world_button);
-	} else {
-		hello_world_label = lv_label_create(lv_scr_act());
-	}
+display_blanking_off(display_dev);
 
-	lv_label_set_text(hello_world_label, "Hello world!");
-	lv_obj_align(hello_world_label, LV_ALIGN_CENTER, 0, 0);
+	// gpio_pin_configure_dt(&led0_spec, GPIO_OUTPUT);
+	gpio_pin_configure_dt(&led1_spec, GPIO_OUTPUT);
+	gpio_pin_configure_dt(&button0_spec, GPIO_INPUT);
+	gpio_pin_configure_dt(&button1_spec, GPIO_INPUT);
+	gpio_pin_configure_dt(&button2_spec, GPIO_INPUT);
+	gpio_pin_configure_dt(&button3_spec, GPIO_INPUT);
 
-	count_label = lv_label_create(lv_scr_act());
-	lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-	lv_task_handler();
-	display_blanking_off(display_dev);
+	gpio_pin_interrupt_configure_dt(&button0_spec, GPIO_INT_EDGE_TO_ACTIVE);
+	gpio_pin_interrupt_configure_dt(&button1_spec, GPIO_INT_EDGE_TO_ACTIVE);
+	gpio_pin_interrupt_configure_dt(&button2_spec, GPIO_INT_EDGE_TO_ACTIVE);
+	gpio_pin_interrupt_configure_dt(&button3_spec, GPIO_INT_EDGE_TO_ACTIVE);
+
+
+	gpio_init_callback(&button0_cb, button0_pressed_callback, BIT(button0_spec.pin));
+
+	gpio_init_callback(&button1_cb, button1_pressed_callback, BIT(button1_spec.pin));
+	gpio_init_callback(&button2_cb, button2_pressed_callback, BIT(button2_spec.pin));
+	gpio_init_callback(&button3_cb, button3_pressed_callback, BIT(button3_spec.pin));
+
+
+	gpio_add_callback(button0_spec.port, &button0_cb);
+	gpio_add_callback(button1_spec.port, &button1_cb);
+	gpio_add_callback(button2_spec.port, &button2_cb);
+	gpio_add_callback(button3_spec.port, &button3_cb);
 
 	while (1) {
-		if ((count % 100) == 0U) {
-			sprintf(count_str, "%d", count/100U);
-			lv_label_set_text(count_label, count_str);
-		}
-		lv_task_handler();
-		++count;
-		k_sleep(K_MSEC(10));
+    watchface_init(blstatus);
+	if(!gpio_pin_set_dt(&led1_spec, 1)){
+		k_msleep(30000);
+		gpio_pin_set_dt(&led1_spec, 1);
 	}
+	}
+
+
 }
+
+
+
+
